@@ -1,18 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>    // Библиотеки
 
-#define md 10         // max_id
+#define md 10    // max_id
 
-int current_day = 1;
-int current_hour = 8;
-int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};
-int inventory_score[md] = {};
-int skip_time = 0;
-const char* slot = " ";
-int id_slot = 0;
-int i = 0;
-int slot1 = 0;
-
+int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 const char* slot_name[md] = {
     "Пусто",
     "Дерево",
@@ -25,21 +17,85 @@ const char* slot_name[md] = {
     "Земля",
     "Мотыга"};
 
-int main(void){
+int check(void) {    // Функция проверка на дурака символы [0 до 9]
     
-    for(int i = 0; i < md; i++){
-        printf("%s, %i\n", slot_name[i], i);
+    char value[10];
+    scanf("%9s", value);
+    
+    if (strlen(value) == 1) {
+        if (value[0] >= '0' && value[0] <= '9') {
+            return value[0] - '0';
+        }
+        else {
+            return 404;
+        }
     }
+    else {
+        return 403;
+    }
+    
+}
+
+int skip_time(void) { // Функция скип тайм с защитой от дурака
+    
+    int num;
+
+    if (scanf("%d", &num) != 1 || num <= 0) {
+        while (getchar() != '\n');
+        return -1;
+    }
+
+    while (getchar() != '\n');
+
+    return num;
+}
+
+int find_the_greatest(void) { // поиск наибольшего
+    
+    int count_for_slot[md] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    
+    for(int i = 1; i < md; i++){
+        for(int j = 0; j < md; j++){
+            if (inventory[j] == i){
+                count_for_slot[i] += 1;
+            }
+        }
+    }
+    
+    int max = count_for_slot[0];
+    int index = 0;
+    
+    for(int i = 1; i < md; i++){
+        if (max < count_for_slot[i]){
+            max = count_for_slot[i];
+            index = i;
+        }
+    }
+    
+    return index;
+    
+}
+
+int main(void) {    // Основная функция
+
+    int current_day = 1;    // кейсы 2 и 3(время)
+    int current_hour = 8;
+    int time_skip;
     
     while(1){
         
-        printf("--------МЕНЮ--------\n1.Текущее время\n2.Пропуск времени\n3.Показать инвентарь\n4.Поднять предмет\n5.Обнуление слота\n6.Любимый ресурс\n0.Завершить программу\n");
+        printf("--------МЕНЮ--------\n1"
+               ".Текущее время\n2"
+               ".Пропуск времени\n3"
+               ".Показать инвентарь\n4"
+               ".Поднять предмет\n5"
+               ".Обнуление слота\n6"
+               ".Любимый ресурс\n7"
+               ".Узнать id слотов\n0"
+               ".Завершить программу\n");
         
-        int number = 0;
-        scanf("%d", &number);
-        
-        switch(number)
-        {
+        switch(check()) {
+                
             case 1 :
                 
                 printf("Текущее время: День: %d, %d:00\n", current_day, current_hour);
@@ -47,88 +103,55 @@ int main(void){
                 
             case 2 :
                 
-                printf("Сколько часов вы хотите пропустить? ");
-                scanf("%d", &skip_time);
-                current_hour = current_hour + skip_time;
-                while (current_hour >= 24) {current_hour = current_hour - 24; current_day += 1;}
-                skip_time = 0;
+                printf("Сколько часов вы хотите пропустить?\n");
+                time_skip = skip_time();
+                if (time_skip == -1) { printf("Неверный ввод!!!\n"); break; }
+                current_hour = current_hour + time_skip;
+                while (current_hour >= 24) { current_hour = current_hour - 24; current_day += 1; }
                 break;
-                
+            
             case 3 :
                 
-                for(int i = 0; i < md; ++i){
-                    
-                    printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], slot_name[inventory[i]]);
-                    
-                }
+                for (int i = 0; i < md; ++i) { printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], slot_name[inventory[i]]); }
                 break;
                 
             case 4 :
                 
-                printf("Чтобы положить/заменить предмет в слот\nУкажите слот [0 до 9]\n");
-                scanf("%d", &slot1);
-                printf("Введите id предмета который хотите поднять. Введите 10 чтобы увидеть список\n");
-                scanf("%d", &id_slot);
-                if (id_slot == md){
-                    for(int i = 0; i < md; i++){
-                        printf("%i.(%s)\n", i, slot_name[i]);
-                    }
-                }
-                inventory[slot1] = id_slot;
-                
-                
+                printf("Чтобы положить/заменить предмет в слот\nУкажите сначала слот, потом id предмета\n");
+                inventory[check()] = check();
                 break;
                 
             case 5 :
                 
-                printf("Введите номер слота, который хотите обнулить [0 до 9]\n");
-                scanf("%d", &id_slot);
-                
-                inventory[id_slot] = 0;
-                id_slot = 0;
-                printf("Слот %d обнулён\n", id_slot);
-                
+                printf("Введите номер слота, который хотите обнулить\n");
+                inventory[check()] = 0;
                 break;
                 
             case 6 :
                 
-                int count[md] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-                
-                for(int i = 1; i < md; i++){
-                    for(int j = 0; j < md; j++){
-                        if (inventory[j] == i){
-                            count[i] += 1;
-                        }
-                    }
-                }
-                
-                int max[1] = {count[0], 0};
-                
-                for(int i = 0; i < md; i++){
-                    if (max[0] < count[i]){
-                        max[0] = count[i];
-                        max[1] = i;
-                    }
-                        }
-                
-                if (max[0] == 0){
-                    printf("Инвентарь пуст\n");
-                }
-                else{
-                    printf("Любимый ресурс: %s %i шт.\n", slot_name[max[1]], max[0]);
-                }
-                
+                if (find_the_greatest() == 0) { printf("Инвентарь пуст\n"); }
+                else { printf("Любимый ресурс: %s\n", slot_name[find_the_greatest()]); }
                 break;
-
+            
+            case 7:
+                
+                for (int i = 0; i < md; i++) { printf("%d. %s", i, slot_name[i]); }
+                break;
+            
+            case 404:
+                
+                printf("Введите 1 символ!!!\n");
+                break;
+            
+            case 403:
+                
+                printf("Введите именно число!!!\n");
+                break;
+                
             case 0 :
                 
                 return 0;
                 
-            default:
-                
-                printf("Такого пункта в меню нет.\n");
-                break;
-
         }
     }
 }
