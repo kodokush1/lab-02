@@ -148,6 +148,11 @@ int main(void) {    // Основная функция
                 for (int i = 0; i < md; i++) { printf("%d. %s\n", i, slot_name[i]); }
                 break;
             
+            default:
+                
+                printf("Нет такого пункта!!!\n");
+                break;
+                
             case 403:
                 
                 printf("Введите один символ и именно число!!!\n");
