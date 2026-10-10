@@ -82,6 +82,9 @@ int main(void) {    // Основная функция
     int current_hour = 8;
     int time_skip;
     
+    int slot;
+    int item;
+    
     while(1){
         
         printf("--------МЕНЮ--------\n1"
@@ -117,14 +120,21 @@ int main(void) {    // Основная функция
                 
             case 4 :
                 
-                printf("Чтобы положить/заменить предмет в слот\nУкажите сначала слот, потом id предмета\n");
-                inventory[check()] = check();
+                printf("Введите номер слота (0-9):\n");
+                slot = check();
+                if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
+                printf("Введите ID предмета (0-9):\n");
+                item = check();
+                if (item == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
+                inventory[slot] = item;
                 break;
                 
             case 5 :
-                
-                printf("Введите номер слота, который хотите обнулить\n");
-                inventory[check()] = 0;
+
+                printf("Введите номер слота [0-9]\n");
+                slot = check();
+                if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
+                inventory[slot] = 0;
                 break;
                 
             case 6 :
@@ -135,7 +145,7 @@ int main(void) {    // Основная функция
             
             case 7:
                 
-                for (int i = 0; i < md; i++) { printf("%d. %s", i, slot_name[i]); }
+                for (int i = 0; i < md; i++) { printf("%d. %s\n", i, slot_name[i]); }
                 break;
             
             case 403:
