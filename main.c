@@ -27,7 +27,7 @@ int check(void) {    // Функция проверка на дурака сим
             return value[0] - '0';
         }
         else {
-            return 404;
+            return 403;
         }
     }
     else {
@@ -138,14 +138,9 @@ int main(void) {    // Основная функция
                 for (int i = 0; i < md; i++) { printf("%d. %s", i, slot_name[i]); }
                 break;
             
-            case 404:
-                
-                printf("Введите 1 символ!!!\n");
-                break;
-            
             case 403:
                 
-                printf("Введите именно число!!!\n");
+                printf("Введите один символ и именно число!!!\n");
                 break;
                 
             case 0 :
