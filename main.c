@@ -3,19 +3,11 @@
 #include <string.h>    // Библиотеки
 
 #define md 10    // max_id
+#define MAX_NAME_LEN 64
+char item_names[10][6];
 
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
-const char* slot_name[md] = {
-    "Пусто",
-    "Дерево",
-    "Камень",
-    "Семена",
-    "Золото",
-    "Железо",
-    "Кирка",
-    "Ведро",
-    "Земля",
-    "Мотыга"};
+char name_items[md][MAX_NAME_LEN];
 
 int check(void) {    // Функция проверка на дурака символы [0 до 9]
     
@@ -76,14 +68,67 @@ int find_the_greatest(void) { // поиск наибольшего
     
 }
 
+void default_items(void) {
+    
+    strcpy(name_items[0], "Пусто");
+    strcpy(name_items[1], "Дерево");
+    strcpy(name_items[2], "Камень");
+    strcpy(name_items[3], "Меч");
+    strcpy(name_items[4], "Золото");
+    strcpy(name_items[5], "Железо");
+    strcpy(name_items[6], "Кирка");
+    strcpy(name_items[7], "Ведро");
+    strcpy(name_items[8], "Земля");
+    strcpy(name_items[9], "Мотыга");
+    
+}
+
+void load_items(void) {
+  
+    FILE *file_items = fopen("items.txt", "r");
+    if (file_items == NULL) { printf("Ошибка при открытии файла\nЗагружены резервные значения\n"); default_items(); return; }
+    
+    int id;
+    char name[MAX_NAME_LEN];
+    
+    while(fscanf(file_items, "%d %63s", &id, name) == 2) {
+        strcpy(name_items[id], name);
+    }
+    
+    fclose(file_items);
+}
+
+int find_id_by_name(char find_item[20]){
+    
+    for(int j = 0; j < md; j++) {
+        if(strcmp(find_item, name_items[j]) == 0) {
+            return j;
+        }
+    }
+    
+    return -1;
+}
+
+int find_item_by_id(int id, int i){
+    
+    if(inventory[i] == id){ return i;}
+    else { return 0; }
+    
+}
+
 int main(void) {    // Основная функция
 
-    int current_day = 1;    // кейсы 2 и 3(время)
+    int current_day = 1;    // Кейсы 2 и 3(время)
     int current_hour = 8;
     int time_skip;
     
     int slot;
     int item;
+    
+    load_items();
+    for( int i = 0; i < 10; i ++){
+        printf("%s\n", name_items[i]);
+    }
     
     while(1){
         
@@ -94,7 +139,9 @@ int main(void) {    // Основная функция
                ".Поднять предмет\n5"
                ".Обнуление слота\n6"
                ".Любимый ресурс\n7"
-               ".Узнать id слотов\n0"
+               ".Поиск предмета в рюкзаке\n8"
+               ".Записать состояние в дневник\n9"
+               ".Расписание жителей деревни\n0"
                ".Завершить программу\n");
         
         switch(check()) {
@@ -115,7 +162,7 @@ int main(void) {    // Основная функция
             
             case 3 :
                 
-                for (int i = 0; i < md; ++i) { printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], slot_name[inventory[i]]); }
+                for (int i = 0; i < md; ++i) { printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], name_items[inventory[i]]); }
                 break;
                 
             case 4 :
@@ -140,14 +187,30 @@ int main(void) {    // Основная функция
             case 6 :
                 
                 if (find_the_greatest() == 0) { printf("Инвентарь пуст\n"); }
-                else { printf("Любимый ресурс: %s\n", slot_name[find_the_greatest()]); }
+                else { printf("Любимый ресурс: %s\n", name_items[find_the_greatest()]); }
                 break;
             
             case 7:
                 
-                for (int i = 0; i < md; i++) { printf("%d. %s\n", i, slot_name[i]); }
+                printf("Введите название искомого предмета: ");
+                char find_item[20];
+                scanf("%s", find_item);
+                int id = find_id_by_name(find_item);
+                if (id == -1) { printf("Такого предмета нет\n"); }
+                else {
+                    printf("Предмет лежит в слотах: ");
+                    for (int i = 0; i < md; i++) { printf("%i ", find_item_by_id(id, i)); }
+                }
+                printf("\n");
+                
+            case 8:
+                
                 break;
             
+            case 9:
+                
+                break;
+                
             default:
                 
                 printf("Нет такого пункта!!!\n");
