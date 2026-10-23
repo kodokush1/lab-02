@@ -4,10 +4,24 @@
 
 #define md 10    // max_id
 #define MAX_NAME_LEN 64
-char item_names[10][6];
+#define shedule 13
 
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 char name_items[md][MAX_NAME_LEN];
+
+char nickname[100];
+
+int current_day = 1;    // Кейсы 2 и 3(время)
+int current_hour = 8;
+int time_skip;
+
+
+void enter_nickname(void) {
+    do{
+        printf("Введите никнейм[до 32 символов]: ");
+        scanf("%99s", nickname);
+    } while (strlen(nickname) > 32);
+}
 
 int check(void) {    // Функция проверка на дурака символы [0 до 9]
     
@@ -98,6 +112,112 @@ void load_items(void) {
     fclose(file_items);
 }
 
+char npc_name[shedule][256];
+char npc_start[shedule][256];
+char npc_end[shedule][256];
+char npc_location[shedule][256];
+
+
+void load_input(void) {
+    FILE *f = fopen("input.txt", "r");
+
+    if (f == NULL) {
+        printf("Ошибка при открытии файла\n");
+        return;
+    }
+
+    char buffer[256];
+    int i = 0;
+
+    while (i < 13 && fgets(buffer, sizeof(buffer), f) != NULL) {
+        buffer[strcspn(buffer, "\r\n")] = '\0';
+
+        int flag = 0;
+        int k = 0;
+
+        for (int j = 0; ; j++) {
+            if (buffer[j] == ';' || buffer[j] == '\0') {
+                if (flag == 0) npc_name[i][j - k] = '\0';
+                if (flag == 1) npc_start[i][j - k] = '\0';
+                if (flag == 2) npc_end[i][j - k] = '\0';
+                if (flag == 3) npc_location[i][j - k] = '\0';
+
+                if (buffer[j] == '\0')
+                    break;
+
+                flag++;
+                k = j + 1;
+            } else {
+                if (flag == 0) npc_name[i][j - k] = buffer[j];
+                if (flag == 1) npc_start[i][j - k] = buffer[j];
+                if (flag == 2) npc_end[i][j - k] = buffer[j];
+                if (flag == 3) npc_location[i][j - k] = buffer[j];
+            }
+        }
+
+        i++;
+    }
+
+    fclose(f);
+}
+
+void check_village(void){
+    
+    FILE *f = fopen("output.txt", "w");
+    if (f == NULL) {
+        printf("Ошибка при открытии файла\n");
+        return;
+    }
+    char *q;
+    fprintf(f, "Время: %i:00\n", current_hour);
+    for(int i = 0; i < shedule; i++){
+        if(current_hour >= strtol(npc_start[i],&q ,10) && current_hour <= strtol(npc_end[i],&q ,10)){
+            fprintf(f, "%-50s[%s]\n", npc_name[i], npc_location[i]);
+        }
+        else{
+            fprintf(f, "%-50s[Спит дома]\n", npc_name[i]);
+        }
+    }
+    fclose(f);
+}
+
+int utf8_len(char const *str){
+    int len = 0;
+    
+    while(*str) {
+        
+        if ((*str & 0xC0) != 0x80) {
+            len++;
+        }
+        str++;
+    }
+    
+    return len;
+    
+}
+
+void diary(void) {
+  
+    FILE *file_diary = fopen("diary.txt", "a");
+    if (file_diary == NULL) { printf("Ошибка при открытии файла\n"); return; }
+    
+    int space = 32 - utf8_len(nickname);
+    fprintf(file_diary, "┌────────────────────────────────┐ ┌──────────────┐\n");
+    fprintf(file_diary, "│%s", nickname);
+    for(int i = 0; i < space; i ++) { fprintf(file_diary, " "); }
+    fprintf(file_diary, "│ │%-5i/%-2i:00   │\n", current_day, current_hour);
+    fprintf(file_diary, "├────────────────────────────────┤ └──────────────┘\n");
+    
+    for(int i = 0; i < md; i ++){
+        space = 22 - utf8_len(name_items[inventory[i]]);
+        fprintf(file_diary, "│ Слот[%d]: %s", i, name_items[inventory[i]]);
+        for(int j = 0; j < space; j++) { fprintf(file_diary, " "); }
+        fprintf(file_diary, "│\n");
+    }
+    fprintf(file_diary, "└────────────────────────────────┘\n");
+    fclose(file_diary);
+}
+
 int find_id_by_name(char find_item[20]){
     
     for(int j = 0; j < md; j++) {
@@ -115,24 +235,23 @@ int find_item_by_id(int id, int i){
     else { return 0; }
     
 }
+    
+
 
 int main(void) {    // Основная функция
-
-    int current_day = 1;    // Кейсы 2 и 3(время)
-    int current_hour = 8;
-    int time_skip;
     
     int slot;
     int item;
     
     load_items();
-    for( int i = 0; i < 10; i ++){
-        printf("%s\n", name_items[i]);
-    }
     
+    enter_nickname();
+    
+    load_input();
+
     while(1){
         
-        printf("--------МЕНЮ--------\n1"
+        printf("Привет, %s\n1"
                ".Текущее время\n2"
                ".Пропуск времени\n3"
                ".Показать инвентарь\n4"
@@ -142,7 +261,7 @@ int main(void) {    // Основная функция
                ".Поиск предмета в рюкзаке\n8"
                ".Записать состояние в дневник\n9"
                ".Расписание жителей деревни\n0"
-               ".Завершить программу\n");
+               ".Завершить программу\n", nickname);
         
         switch(check()) {
                 
@@ -205,10 +324,12 @@ int main(void) {    // Основная функция
                 
             case 8:
                 
+                diary();
                 break;
             
             case 9:
                 
+                check_village();
                 break;
                 
             default:
