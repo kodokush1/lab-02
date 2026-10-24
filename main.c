@@ -9,20 +9,13 @@
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 char name_items[md][MAX_NAME_LEN];
 
-char nickname[100];
+char nickname[256];
 
 int current_day = 1;    // Кейсы 2 и 3(время)
 int current_hour = 8;
 int time_skip;
 
-
-void enter_nickname(void) {
-    do{
-        printf("Введите никнейм[до 32 символов]: ");
-        scanf("%99s", nickname);
-    } while (strlen(nickname) > 32);
-}
-
+//НАДО ПЕРЕЛЕЛАИТТ
 int check(void) {    // Функция проверка на дурака символы [0 до 9]
     
     char value[10];
@@ -41,7 +34,7 @@ int check(void) {    // Функция проверка на дурака сим
     }
     
 }
-
+//НАДО ПКЕрЕДАЛТЬ
 int skip_time(void) { // Функция скип тайм с защитой от дурака
     
     int num;
@@ -54,9 +47,89 @@ int skip_time(void) { // Функция скип тайм с защитой от
     while (getchar() != '\n');
 
     return num;
+    
 }
 
-int find_the_greatest(void) { // поиск наибольшего
+//какая та шляпа чтобы считать количество символов и потом можно было пробелы ставить и там типа красиво
+int utf8_len(char const *str) {
+    
+    int len = 0;
+
+    while(*str) {
+        if((*str & 0xC0) != 0x80) {
+            len++;
+        }
+        str++;
+    }
+    return len;
+    
+}
+
+//ВВОД НИКНЕЙМА
+void enter_nickname(void) {
+    do {
+
+        printf("Введите никнейм[до 32 символов]: ");
+        scanf("%255s", nickname);
+    } while (utf8_len(nickname) > 32);
+    
+}
+
+//ТЕКУЩЕЕ ВРЕМЯ
+void print_current_hour(void) {
+    
+    printf("Текущее время: День: %d, %d:00\n", current_day, current_hour);
+    
+}
+
+//ПРОПУСК ВРЕМЕНИ
+void print_skip_time(void) {
+    
+    printf("Сколько часов вы хотите пропустить?\n");
+    time_skip = skip_time();
+    if (time_skip == -1) { printf("Неверный ввод!!!\n"); return; }
+    current_hour = current_hour + time_skip;
+    while (current_hour >= 24) { current_hour = current_hour - 24; current_day += 1; }
+    
+}
+
+//ПОКАЗАТЬ ИНВЕНТАРЬ
+void print_inventory(void) {
+    
+    for (int i = 0; i < md; ++i) { printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], name_items[inventory[i]]); }
+    
+}
+
+//ПОДНЯТЬ ПРЕДМЕТ
+void up_item(void) {
+    
+    int slot;
+    int item;
+    
+    printf("Введите номер слота (0-9):\n");
+    slot = check();
+    if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    printf("Введите ID предмета (0-9):\n");
+    item = check();
+    if (item == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    inventory[slot] = item;
+    
+}
+
+//ЗАНУЛЕНИЕ СЛОТА
+void null_slot(void) {
+
+    int slot;
+    
+    printf("Введите номер слота [0-9]\n");
+    slot = check();
+    if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    inventory[slot] = 0;
+    
+}
+
+//ПОИСК НАИБОЛЬШЕГО //НАДО ПЕРЕДЕЛАТЬ
+int find_the_greatest(void) {
     
     int count_for_slot[md] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
     
@@ -82,6 +155,49 @@ int find_the_greatest(void) { // поиск наибольшего
     
 }
 
+void print_find_the_greatest(void) {
+    
+    if (find_the_greatest() == 0) { printf("Инвентарь пуст\n"); }
+    else { printf("Любимый ресурс: %s\n", name_items[find_the_greatest()]); }
+    
+}
+
+//ПОИСК ПО НАЗВАНИЮ
+void find_id_by_name(void) {
+
+    char find_item[64];
+    int count_iteration = 0;
+    int id = -1;
+
+    printf("Введите название искомого предмета: ");
+    if(scanf("%63s", find_item) != 1) {
+        printf("Ошибка ввода\n");
+        return;
+    }
+
+    for(int i = 0; i < md; i++) {
+        if (strcmp(find_item, name_items[i]) == 0) {
+            id = i;
+            break;
+        }
+    }
+
+    if(id == -1) { printf("Такого предмета не существует\n"); return; }
+
+    for(int j = 0; j < md; j++) {
+        if(id == inventory[j]) {
+            if (count_iteration == 0) { printf("Предмет лежит в слотах: "); }
+            printf("%i ", j);
+            count_iteration++;
+        }
+    }
+
+    if(count_iteration == 0) { printf("Предмет не найден в инвентаре\n"); }
+    else { printf("\n"); }
+    
+}
+
+//ПОДГРУЗКА ИМЕН ДЛЯ ИНВЕНТАРЯ
 void default_items(void) {
     
     strcpy(name_items[0], "Пусто");
@@ -110,91 +226,80 @@ void load_items(void) {
     }
     
     fclose(file_items);
+    
 }
 
-char npc_name[shedule][256];
-char npc_start[shedule][256];
-char npc_end[shedule][256];
-char npc_location[shedule][256];
+//РАСПИСАНИЕ ЖИТЕЛЕЙ
+typedef struct {
+    char name[256];
+    int start;
+    int end;
+    char location[256];
+} NPC;
 
+NPC villagers[shedule];
 
 void load_input(void) {
+    
     FILE *f = fopen("input.txt", "r");
-
-    if (f == NULL) {
-        printf("Ошибка при открытии файла\n");
-        return;
-    }
-
+    if(f == NULL) { printf("Ошибка открытия файла!"); return; }
+    
     char buffer[256];
     int i = 0;
-
-    while (i < 13 && fgets(buffer, sizeof(buffer), f) != NULL) {
-        buffer[strcspn(buffer, "\r\n")] = '\0';
-
-        int flag = 0;
-        int k = 0;
-
-        for (int j = 0; ; j++) {
-            if (buffer[j] == ';' || buffer[j] == '\0') {
-                if (flag == 0) npc_name[i][j - k] = '\0';
-                if (flag == 1) npc_start[i][j - k] = '\0';
-                if (flag == 2) npc_end[i][j - k] = '\0';
-                if (flag == 3) npc_location[i][j - k] = '\0';
-
-                if (buffer[j] == '\0')
-                    break;
-
-                flag++;
-                k = j + 1;
-            } else {
-                if (flag == 0) npc_name[i][j - k] = buffer[j];
-                if (flag == 1) npc_start[i][j - k] = buffer[j];
-                if (flag == 2) npc_end[i][j - k] = buffer[j];
-                if (flag == 3) npc_location[i][j - k] = buffer[j];
-            }
-        }
-
+    
+    while(i < shedule && fgets(buffer, sizeof(buffer), f) != NULL) {
+        NPC *npc = &villagers[i];
+        sscanf(buffer, "%255[^;];%d;%d;%255[^\r\n]", npc -> name, &npc -> start, &npc -> end, npc -> location);
         i++;
     }
 
     fclose(f);
+    
 }
 
-void check_village(void){
-    
+void check_village(void) {
+
     FILE *f = fopen("output.txt", "w");
-    if (f == NULL) {
-        printf("Ошибка при открытии файла\n");
-        return;
-    }
-    char *q;
+    if(f == NULL) { printf("Ошибка при открытии файла\n"); return; }
+
     fprintf(f, "Время: %i:00\n", current_hour);
-    for(int i = 0; i < shedule; i++){
-        if(current_hour >= strtol(npc_start[i],&q ,10) && current_hour <= strtol(npc_end[i],&q ,10)){
-            fprintf(f, "%-50s[%s]\n", npc_name[i], npc_location[i]);
+
+    for(int i = 0; i < shedule; i++) {
+
+        int duplicate = 0;
+
+        for(int k = 0; k < i; k++) {
+            if(strcmp(villagers[i].name, villagers[k].name) == 0) { duplicate = 1; }
         }
-        else{
-            fprintf(f, "%-50s[Спит дома]\n", npc_name[i]);
+
+        if (duplicate == 1) { continue; }
+
+        const char *location = "Спит_дома";
+
+        for(int j = 0; j < shedule; j++) {
+
+            if(strcmp(villagers[i].name, villagers[j].name) == 0) {
+
+                if((current_hour >= villagers[j].start && current_hour < villagers[j].end) ||
+                    (villagers[j].start > villagers[j].end && current_hour <= villagers[j].start && current_hour > villagers[j].end)) {
+
+                    location = villagers[j].location;
+                }
+            }
         }
+
+        int space = 22 - utf8_len(villagers[i].name);
+        
+        fprintf(f, "%s", villagers[i].name);
+        for(int j = 0; j < space; j++) { fprintf(f, " "); }
+        fprintf(f, "[%s]\n", location);
     }
+
     fclose(f);
+    
 }
 
-int utf8_len(char const *str){
-    int len = 0;
-    
-    while(*str) {
-        
-        if ((*str & 0xC0) != 0x80) {
-            len++;
-        }
-        str++;
-    }
-    
-    return len;
-    
-}
+//ДНЕВНИК
 
 void diary(void) {
   
@@ -202,52 +307,36 @@ void diary(void) {
     if (file_diary == NULL) { printf("Ошибка при открытии файла\n"); return; }
     
     int space = 32 - utf8_len(nickname);
-    fprintf(file_diary, "┌────────────────────────────────┐ ┌──────────────┐\n");
+    fprintf(file_diary, "┌────────────────────────────────┐\n");
+    printf("┌────────────────────────────────┐\n");
     fprintf(file_diary, "│%s", nickname);
-    for(int i = 0; i < space; i ++) { fprintf(file_diary, " "); }
-    fprintf(file_diary, "│ │%-5i/%-2i:00   │\n", current_day, current_hour);
-    fprintf(file_diary, "├────────────────────────────────┤ └──────────────┘\n");
+    printf("│%s", nickname);
+    for(int i = 0; i < space; i ++) { fprintf(file_diary, " "); printf(" "); }
+    fprintf(file_diary, "│ %d День/%d:00\n", current_day, current_hour);
+    printf("│ %d День/%d:00\n", current_day, current_hour);
+    fprintf(file_diary, "├────────────────────────────────┤\n");
+    printf("├────────────────────────────────┤\n");
     
     for(int i = 0; i < md; i ++){
         space = 22 - utf8_len(name_items[inventory[i]]);
         fprintf(file_diary, "│ Слот[%d]: %s", i, name_items[inventory[i]]);
-        for(int j = 0; j < space; j++) { fprintf(file_diary, " "); }
+        printf("│ Слот[%d]: %s", i, name_items[inventory[i]]);
+        for(int j = 0; j < space; j++) { fprintf(file_diary, " "); printf(" "); }
         fprintf(file_diary, "│\n");
+        printf("│\n");
     }
     fprintf(file_diary, "└────────────────────────────────┘\n");
+    printf("└────────────────────────────────┘\n");
     fclose(file_diary);
-}
-
-int find_id_by_name(char find_item[20]){
-    
-    for(int j = 0; j < md; j++) {
-        if(strcmp(find_item, name_items[j]) == 0) {
-            return j;
-        }
-    }
-    
-    return -1;
-}
-
-int find_item_by_id(int id, int i){
-    
-    if(inventory[i] == id){ return i;}
-    else { return 0; }
     
 }
-    
 
+//МЭЙН
+int main(void) {
 
-int main(void) {    // Основная функция
-    
-    int slot;
-    int item;
-    
-    load_items();
-    
-    enter_nickname();
-    
-    load_input();
+        load_items();
+        enter_nickname();
+        load_input();
 
     while(1){
         
@@ -267,60 +356,38 @@ int main(void) {    // Основная функция
                 
             case 1 :
                 
-                printf("Текущее время: День: %d, %d:00\n", current_day, current_hour);
+                print_current_hour();
                 break;
                 
             case 2 :
                 
-                printf("Сколько часов вы хотите пропустить?\n");
-                time_skip = skip_time();
-                if (time_skip == -1) { printf("Неверный ввод!!!\n"); break; }
-                current_hour = current_hour + time_skip;
-                while (current_hour >= 24) { current_hour = current_hour - 24; current_day += 1; }
+                print_skip_time();
                 break;
             
             case 3 :
                 
-                for (int i = 0; i < md; ++i) { printf("Слот[%d]: (%d) (%s)\n", i, inventory[i], name_items[inventory[i]]); }
+                print_inventory();
                 break;
                 
             case 4 :
                 
-                printf("Введите номер слота (0-9):\n");
-                slot = check();
-                if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
-                printf("Введите ID предмета (0-9):\n");
-                item = check();
-                if (item == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
-                inventory[slot] = item;
+                up_item();
                 break;
                 
             case 5 :
 
-                printf("Введите номер слота [0-9]\n");
-                slot = check();
-                if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); break; }
-                inventory[slot] = 0;
+                null_slot();
                 break;
                 
             case 6 :
                 
-                if (find_the_greatest() == 0) { printf("Инвентарь пуст\n"); }
-                else { printf("Любимый ресурс: %s\n", name_items[find_the_greatest()]); }
+                print_find_the_greatest();
                 break;
             
             case 7:
                 
-                printf("Введите название искомого предмета: ");
-                char find_item[20];
-                scanf("%s", find_item);
-                int id = find_id_by_name(find_item);
-                if (id == -1) { printf("Такого предмета нет\n"); }
-                else {
-                    printf("Предмет лежит в слотах: ");
-                    for (int i = 0; i < md; i++) { printf("%i ", find_item_by_id(id, i)); }
-                }
-                printf("\n");
+                find_id_by_name();
+                break;
                 
             case 8:
                 
