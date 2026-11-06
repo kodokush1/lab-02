@@ -327,117 +327,126 @@ void diary(void) {
 }
 
 //КАРТА
-void free_map(char **map, int height) {
-    for (int i = 0; i < height; i++) {
-        free(map[i]);
-    }
-    free(map);
+typedef struct {
+    char **cells;
+    int height;
+    int width;
+} Map;
+
+typedef struct {
+    int x;
+    int y;
+} Hero;
+
+typedef struct {
+    int x;
+    int y;
+} Bonfire;
+
+typedef struct {
+    Map map;
+    Hero hero;
+    Bonfire bonfire;
+    int vision;
+    int rooms;
+} Adventure;
+
+int create_map(Map *map, int height, int width) {
+    
+    map->height = height;
+    map->width = width;
+    
+    map->cells = (char**)malloc(height * sizeof(char*));
+    
+    for (int i = 0; i < height; i++) {map->cells[i] = (char*)malloc(width * sizeof(char));}
+    
+    return 1;
 }
 
-char **create_map(int height, int width) {
-    
-    char **map = (char**)malloc(height * sizeof(char*));
-    
-    for (int i = 0; i < height; i++) {
-        map[i] = (char*)malloc(width * sizeof(char));
+void free_map(Map *map) {
+    for (int i = 0; i < map->height; i++) {
+        free(map->cells[i]);
     }
-    return map;
+    free(map->cells);
 }
 
-void generate_map(char **map, int height, int width) {
-    for(int i = 0; i < height; i++) {
-        for(int j = 0; j < width; j++) {
+void generate_map(Map *map) {
+    
+    for (int i = 0; i < map->height; i++) {
+        for (int j = 0; j < map->width; j++) {
+            
             int chance = rand() % 100;
-            if(chance <= 15) {map[i][j] = 'T';}
-            else if(chance <= 30 && chance > 15) {map[i][j] = 'R';}
-            else {map[i][j] = '.';}
+            
+            if (chance <= 15) {map->cells[i][j] = 'T';}
+            else if (chance <= 30 && chance > 15) {map->cells[i][j] = 'R';}
+            else {map->cells[i][j] = '.';}
+            
         }
     }
 }
 
-void generate_night_map(char **night_map, int height, int width) {
-    for(int i = 0; i < height; i++) {
-        for(int j = 0; j < width; j++) {
-            night_map[i][j] = '?';
-        }
-    }
+void create_hero(Adventure *adventure) {
+    do {
+        
+        adventure->hero.x = rand() % adventure->map.width;
+        adventure->hero.y = rand() % adventure->map.height;
+        
+    } while(adventure->map.cells[adventure->hero.y][adventure->hero.y] != '.');
 }
 
-void print_map(char **map, char **night_map, int height, int width, int vision, int *hero_x, int *hero_y) {
-    for(int i = 0; i < height; i++) {
-        for(int j = 0; j < width; j++) {
-            if (i == (*hero_y) && j == (*hero_x)) {printf(" *"); continue;}
+void create_bonfire(Adventure *adventure) {
+    do {
+        
+        adventure->bonfire.x = rand() % adventure->map.width;
+        adventure->bonfire.y = rand() % adventure->map.height;
+        
+    } while(adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] != '.' ||
+            (adventure->hero.x != adventure->bonfire.x && adventure->hero.y != adventure->bonfire.y));
+    
+    adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] = '^';
+}
+
+int move_hero(Adventure *adventure, char move_direction) {
+    
+    int new_x = adventure->hero.x;
+    int new_y = adventure->hero.y;
+    
+    if (move_direction == 'A') {new_x--;}
+    if (move_direction == 'D') {new_x++;}
+    if (move_direction == 'W') {new_y--;}
+    if (move_direction == 'S') {new_y++;}
+    
+    if (new_y >= adventure->map.height || new_x >= adventure->map.width || new_x < 0 || new_y < 0) {return 2;}
+
+    if (adventure->map.cells[new_y][new_x] != '.' && adventure->map.cells[new_y][new_x] != '^') {return 0;}
+    
+    adventure->hero.x = new_x;
+    adventure->hero.y = new_y;
+    
+    if (adventure->map.cells[new_y][new_x] == '^') {return 3;}
+    
+    return 0;
+}
+
+void print_map(Adventure *adventure) {
+    for (int i = 0; i < adventure->map.height; i++) {
+        for (int j = 0; j < adventure->map.width; j++) {
+            if (i == adventure->hero.y && j == adventure->hero.x) {printf(" *"); continue;}
             
-            int dx = *hero_x - j;
-            int dy = *hero_y - i;
+            int dx = adventure->hero.x - j;
+            int dy = adventure->hero.y - i;
             
-            if (dx * dx + dy * dy <= 49 && vision > 0) {printf(" %c", map[i][j]); continue;}
+            if (dx * dx + dy * dy <= 49 && adventure->vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
             
-            printf(" %c", night_map[i][j]);
+            printf(" ?");
         }
         printf("\n");
     }
 }
 
-void create_hero(char **map, int height, int width, int *hero_x, int *hero_y) {
-    
-    int flag = 0;
-    
-    do {
-        for(int i = 0; i < height; i++) {
-            for(int j = 0; j < width; j++) {
-                
-                if(map[i][j] == '.' && rand() % 100 == 1) {
-                    *hero_x = j;
-                    *hero_y = i;
-                    flag = 1;
-                    break;
-                }
-            }
-            if (flag == 1) {break;}
-        }
-    } while (flag != 1);
-}
-
-int move_hero(char **map, int *hero_x, int *hero_y, int height, int width, char move_directrion) {
-    
-    int new_x = *hero_x;
-    int new_y = *hero_y;
-    
-    if (move_directrion == 'A') {new_x--;}
-    if (move_directrion == 'D') {new_x++;}
-    if (move_directrion == 'W') {new_y--;}
-    if (move_directrion == 'S') {new_y++;}
-    
-    if (new_y >= height || new_x >= width || new_x < 0 || new_y < 0) {return 2;}
-
-    if (map[new_y][new_x] != '.' && map[new_y][new_x] != '^') {return 0;}
-    
-    *hero_x = new_x;
-    *hero_y = new_y;
-    
-    if (map[new_y][new_x] == '^') {return 3;}
-    
-    return 0;
-}
-
-void create_bonfire(char **map, int height, int width) {
-    
-    int bonfire_position_x, bonfire_position_y;
-    
-    do {
-        
-        bonfire_position_x = rand() % width;
-        bonfire_position_y = rand() % height;
-    
-    } while(map[bonfire_position_y][bonfire_position_x] != '.' );
-    
-    map[bonfire_position_y][bonfire_position_x] = '^';
-    
-}
-
 void map(void) {
     
+    Adventure adventure = {0};
     int width = (rand() % 26) + 5;
     int height = width;
     int hero_x;
@@ -446,38 +455,36 @@ void map(void) {
     int vision = -1;
     int rooms = 1;
     int result = 1;
-    char **map = create_map(height, width);
-    char **night_map = create_map(height, width);
     
-    generate_map(map, height, width);
-    generate_night_map(night_map, height, width);
+    create_map(&adventure.map, height, width);
+    generate_map(&adventure.map);
     
-    create_hero(map, height, width, &hero_x, &hero_y);
-    create_bonfire(map, height, width);
+    create_hero(&adventure);
+    create_bonfire(&adventure);
     
     while(1) {
+        
         if (key == 'R') {vision = 3;}
-        print_map(map, night_map, height, width, vision, &hero_x, &hero_y);
+        
+        print_map(&adventure);
+        
         scanf(" %c", &key);
-        result = move_hero(map, &hero_x, &hero_y, height, width, key);
+        
+        result = move_hero(&adventure, key);
+        
         if (result == 2) {
             
             printf("Вы все дальше от дома....");
             
-            free_map(map, height);
-            free_map(night_map, height);
+            free_map(&adventure.map);
             
             width = (rand() % 26) + 5;
             height = width;
             rooms++;
             
-            map = create_map(height, width);
-            night_map = create_map(height, width);
-            
-            generate_map(map, height, width);
-            generate_night_map(night_map, height, width);
-            
-            create_bonfire(map, height, width);
+            create_map(&adventure.map, height, width);
+            generate_map(&adventure.map);
+            create_bonfire(&adventure);
             
             if (key == 'W') {hero_x = width / 2; hero_y = height - 1;}
             else if (key == 'A') {hero_x = width - 1; hero_y = height / 2;}
@@ -494,7 +501,7 @@ void map(void) {
         printf("Расстояние до дома: бесконечность и %i\n", rooms);
         if (vision != -1) {vision--;}
     }
-    free_map(map, height);
+    free_map(&adventure.map);
 }
 
 //МЭЙН
