@@ -366,7 +366,7 @@ void generate_night_map(char **night_map, int height, int width) {
 void print_map(char **map, char **night_map, int height, int width, int vision, int *hero_x, int *hero_y) {
     for(int i = 0; i < height; i++) {
         for(int j = 0; j < width; j++) {
-            if (map[i][j] == '*') {printf(" %c", map[i][j]); continue;}
+            if (i == (*hero_y) && j == (*hero_x)) {printf(" *"); continue;}
             
             int dx = *hero_x - j;
             int dy = *hero_y - i;
@@ -410,16 +410,14 @@ int move_hero(char **map, int *hero_x, int *hero_y, int height, int width, char 
     if (move_directrion == 'W') {new_y--;}
     if (move_directrion == 'S') {new_y++;}
     
-    if (new_y >= height || new_x >= width || new_x < 0 || new_y < 0) {return 1;}
+    if (new_y >= height || new_x >= width || new_x < 0 || new_y < 0) {return 2;}
     
-    if (map[new_y][new_x] != '.' || map[new_y][new_x] == '^') {return 0;}
-    
-    map[*hero_y][*hero_x] = '.';
+    if (map[new_y][new_x] != '.' && map[new_y][new_x] != '^') {return 0;}
     
     *hero_x = new_x;
     *hero_y = new_y;
     
-    map[*hero_y][*hero_x] = '*';
+    if (map[new_y][new_x] == '^') {return 3;}
     
     return 0;
 }
@@ -433,7 +431,7 @@ void create_bonfire(char **map, int height, int width) {
         bonfire_position_x = rand() % width;
         bonfire_position_y = rand() % height;
     
-    } while(map[bonfire_position_y][bonfire_position_x] != '.');
+    } while(map[bonfire_position_y][bonfire_position_x] != '.' );
     
     map[bonfire_position_y][bonfire_position_x] = '^';
     
@@ -449,6 +447,7 @@ void map(void) {
     char key = ' ';
     int vision = -1;
     int rooms = 1;
+    int result = 1;
     char **map = create_map(height, width);
     char **night_map = create_map(height, width);
     
@@ -458,11 +457,12 @@ void map(void) {
     create_hero(map, height, width, &hero_x, &hero_y);
     create_bonfire(map, height, width);
     
-    do {
+    while(1) {
         if (key == 'R') {vision = 3;}
         print_map(map, night_map, height, width, vision, &hero_x, &hero_y);
         scanf(" %c", &key);
-        if (move_hero(map, &hero_x, &hero_y, height, width, key) == 1) {
+        result = move_hero(map, &hero_x, &hero_y, height, width, key);
+        if (result == 2) {
             
             printf("Вы все дальше от дома....");
             int width = (rand() % 26) + 5;
@@ -479,9 +479,15 @@ void map(void) {
             generate_night_map(night_map, height, width);
             
         }
+        if (result == 3) {
+            //printf("Вы нашли костер... вас клонит в сон...\n");
+            if (key == 'Q' || key == 'q') {
+                break;
+            }
+        }
         printf("Расстояние до дома: бесконечность и %i\n", rooms);
         if (vision != -1) {vision--;}
-    } while(key != 'Q' && on_bonfire == 1);
+    }
     free_map(map, height);
 }
 
