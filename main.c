@@ -388,7 +388,6 @@ void create_hero(char **map, int height, int width, int *hero_x, int *hero_y) {
             for(int j = 0; j < width; j++) {
                 
                 if(map[i][j] == '.' && rand() % 100 == 1) {
-                    map[i][j] = '*';
                     *hero_x = j;
                     *hero_y = i;
                     flag = 1;
@@ -411,7 +410,7 @@ int move_hero(char **map, int *hero_x, int *hero_y, int height, int width, char 
     if (move_directrion == 'S') {new_y++;}
     
     if (new_y >= height || new_x >= width || new_x < 0 || new_y < 0) {return 2;}
-    
+
     if (map[new_y][new_x] != '.' && map[new_y][new_x] != '^') {return 0;}
     
     *hero_x = new_x;
@@ -443,7 +442,6 @@ void map(void) {
     int height = width;
     int hero_x;
     int hero_y;
-    int on_bonfire;
     char key = ' ';
     int vision = -1;
     int rooms = 1;
@@ -465,18 +463,26 @@ void map(void) {
         if (result == 2) {
             
             printf("Вы все дальше от дома....");
-            int width = (rand() % 26) + 5;
-            int height = width;
-            rooms++;
             
             free_map(map, height);
             free_map(night_map, height);
+            
+            width = (rand() % 26) + 5;
+            height = width;
+            rooms++;
             
             map = create_map(height, width);
             night_map = create_map(height, width);
             
             generate_map(map, height, width);
             generate_night_map(night_map, height, width);
+            
+            create_bonfire(map, height, width);
+            
+            if (key == 'W') {hero_x = width / 2; hero_y = height - 1;}
+            else if (key == 'A') {hero_x = width - 1; hero_y = height / 2;}
+            else if (key == 'S') {hero_x = width / 2; hero_y = 0;}
+            else if (key == 'D') {hero_x = 0; hero_y = height / 2;}
             
         }
         if (result == 3) {
