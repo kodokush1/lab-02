@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>    // Библиотеки
+#include <time.h>
 
 #define md 10    // max_id
 #define MAX_NAME_LEN 64
@@ -16,26 +17,9 @@ int current_hour = 8;
 int time_skip;
 
 //НАДО ПЕРЕЛЕЛАИТТ
-int check(void) {    // Функция проверка на дурака символы [0 до 9]
-    
-    char value[10];
-    scanf("%9s", value);
-    
-    if (strlen(value) == 1) {
-        if (value[0] >= '0' && value[0] <= '9') {
-            return value[0] - '0';
-        }
-        else {
-            return 403;
-        }
-    }
-    else {
-        return 403;
-    }
-    
-}
+
 //НАДО ПКЕрЕДАЛТЬ
-int skip_time(void) { // Функция скип тайм с защитой от дурака
+int check(void) { // Функция скип тайм с защитой от дурака
     
     int num;
 
@@ -46,6 +30,18 @@ int skip_time(void) { // Функция скип тайм с защитой от
 
     while (getchar() != '\n');
 
+    return num;
+    
+}
+
+int check_slot(void) {
+    
+    int num;
+    
+    do{
+        num = check();
+    } while(num < md || num >= 0);
+    
     return num;
     
 }
@@ -86,7 +82,7 @@ void print_current_hour(void) {
 void print_skip_time(void) {
     
     printf("Сколько часов вы хотите пропустить?\n");
-    time_skip = skip_time();
+    time_skip = check();
     if (time_skip == -1) { printf("Неверный ввод!!!\n"); return; }
     current_hour = current_hour + time_skip;
     while (current_hour >= 24) { current_hour = current_hour - 24; current_day += 1; }
@@ -107,10 +103,10 @@ void up_item(void) {
     int item;
     
     printf("Введите номер слота (0-9):\n");
-    slot = check();
+    slot = check_slot();
     if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
     printf("Введите ID предмета (0-9):\n");
-    item = check();
+    item = check_slot();
     if (item == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
     inventory[slot] = item;
     
@@ -122,7 +118,7 @@ void null_slot(void) {
     int slot;
     
     printf("Введите номер слота [0-9]\n");
-    slot = check();
+    slot = check_slot();
     if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
     inventory[slot] = 0;
     
@@ -300,7 +296,6 @@ void check_village(void) {
 }
 
 //ДНЕВНИК
-
 void diary(void) {
   
     FILE *file_diary = fopen("diary.txt", "a");
@@ -331,13 +326,108 @@ void diary(void) {
     
 }
 
+//КАРТА
+char **create_map(int height, int width) {
+    
+    char **map = (char**)malloc(height * sizeof(char*));
+    
+    for (int i = 0; i < height; i++) {
+        map[i] = (char*)malloc(width * sizeof(char));
+    }
+    return map;
+}
+
+void generate_map(char **map, int height, int width) {
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            int chance = rand() % 100;
+            if(chance <= 15) {map[i][j] = 'T';}
+            else if(chance <= 30 && chance > 15) {map[i][j] = 'R';}
+            else {map[i][j] = '.';}
+        }
+    }
+}
+
+void print_map(char **map, int height, int width) {
+    for(int i = 0; i < height; i++) {
+        for(int j = 0; j < width; j++) {
+            printf(" %c", map[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+void create_hero(char **map, int height, int width, int *hero_x, int *hero_y) {
+    
+    int flag = 0;
+    
+    do {
+        for(int i = 0; i < height; i++) {
+            for(int j = 0; j < width; j++) {
+                
+                if(map[i][j] == '.' && rand() % 100 == 1) {
+                    map[i][j] = '*';
+                    *hero_x = j;
+                    *hero_y = i;
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 1) {break;}
+        }
+    } while (flag != 1);
+}
+
+void move_hero(char **map, int *hero_x, int *hero_y, char height, char width, char move_directrion) {
+    
+    char new_x = *hero_x;
+    char new_y = *hero_y;
+    
+    if (move_directrion == 'A') {new_x--;}
+    if (move_directrion == 'D') {new_x++;}
+    if (move_directrion == 'W') {new_y--;}
+    if (move_directrion == 'S') {new_y++;}
+    
+    if (new_y >= height || new_x >= width || new_x < 0 || new_y < 0) {return;}
+    
+    if (map[new_y][new_x] != '.') {return;}
+    
+    map[*hero_y][*hero_x] = '.';
+    
+    *hero_x = new_x;
+    *hero_y = new_y;
+    
+    map[*hero_y][*hero_x] = '*';
+    
+}
+
+void map(void) {
+    
+    int width = (rand() % 26) + 5;
+    int height = width;
+    int hero_x;
+    int hero_y;
+    char key;
+    
+    char **map = create_map(height, width);
+    generate_map(map, height, width);
+    create_hero(map, height, width, &hero_x, &hero_y);
+    do {
+        print_map(map, height, width);
+        scanf(" %c", &key);
+        move_hero(map, &hero_x, &hero_y, height, width, key);
+        printf("--------------------------------------\n");
+    } while(key != 'Q');
+}
+
 //МЭЙН
 int main(void) {
-
-        load_items();
-        enter_nickname();
-        load_input();
-
+    
+    load_items();
+    enter_nickname();
+    load_input();
+    srand((unsigned int)time(0));
+    
     while(1){
         
         printf("Привет, %s\n1"
@@ -355,62 +445,31 @@ int main(void) {
         switch(check()) {
                 
             case 1 :
-                
-                print_current_hour();
-                break;
-                
+                print_current_hour(); break;
             case 2 :
-                
-                print_skip_time();
-                break;
-            
+                print_skip_time(); break;
             case 3 :
-                
-                print_inventory();
-                break;
-                
+                print_inventory(); break;
             case 4 :
-                
-                up_item();
-                break;
-                
+                up_item(); break;
             case 5 :
-
-                null_slot();
-                break;
-                
+                null_slot(); break;
             case 6 :
-                
-                print_find_the_greatest();
-                break;
-            
+                print_find_the_greatest(); break;
             case 7:
-                
                 find_id_by_name();
                 break;
-                
             case 8:
-                
-                diary();
-                break;
-            
+                diary(); break;
             case 9:
-                
-                check_village();
-                break;
-                
+                check_village(); break;
+            case 10:
+                map(); break;
             default:
-                
-                printf("Нет такого пункта!!!\n");
-                break;
-                
+                printf("Нет такого пункта!!!\n"); break;
             case 403:
-                
-                printf("Введите один символ и именно число!!!\n");
-                break;
-                
+                printf("Введите один символ и именно число!!!\n"); break;
             case 0 :
-                
                 return 0;
                 
         }
