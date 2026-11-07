@@ -351,6 +351,18 @@ typedef struct {
     int rooms;
 } Adventure;
 
+void free_map(Map *map) {
+    for (int i = 0; i < map->height; i++) {
+        free(map->cells[i]);
+    }
+    
+    free(map->cells);
+    
+    map->cells = NULL;
+    map->width = 0;
+    map->height = 0;
+}
+
 int create_map(Map *map, int height, int width) {
     
     map->height = height;
@@ -358,16 +370,20 @@ int create_map(Map *map, int height, int width) {
     
     map->cells = (char**)malloc(height * sizeof(char*));
     
-    for (int i = 0; i < height; i++) {map->cells[i] = (char*)malloc(width * sizeof(char));}
+    if (map->cells == NULL) {
+        return 0;
+    }
+    
+    for (int i = 0; i < height; i++) {
+        map->cells[i] = (char*)malloc(width * sizeof(char));
+    
+        if (map->cells[i] == NULL) {
+            for (int j = 0; j < i; j++) {free(map->cells[j]);}
+            return 0;
+        }
+    }
     
     return 1;
-}
-
-void free_map(Map *map) {
-    for (int i = 0; i < map->height; i++) {
-        free(map->cells[i]);
-    }
-    free(map->cells);
 }
 
 void generate_map(Map *map) {
@@ -391,7 +407,7 @@ void create_hero(Adventure *adventure) {
         adventure->hero.x = rand() % adventure->map.width;
         adventure->hero.y = rand() % adventure->map.height;
         
-    } while(adventure->map.cells[adventure->hero.y][adventure->hero.y] != '.');
+    } while(adventure->map.cells[adventure->hero.y][adventure->hero.x] != '.');
 }
 
 void create_bonfire(Adventure *adventure) {
@@ -401,7 +417,7 @@ void create_bonfire(Adventure *adventure) {
         adventure->bonfire.y = rand() % adventure->map.height;
         
     } while(adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] != '.' ||
-            (adventure->hero.x != adventure->bonfire.x && adventure->hero.y != adventure->bonfire.y));
+            (adventure->hero.x == adventure->bonfire.x && adventure->hero.y == adventure->bonfire.y));
     
     adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] = '^';
 }
@@ -412,9 +428,10 @@ int move_hero(Adventure *adventure, char move_direction) {
     int new_y = adventure->hero.y;
     
     if (move_direction == 'A') {new_x--;}
-    if (move_direction == 'D') {new_x++;}
-    if (move_direction == 'W') {new_y--;}
-    if (move_direction == 'S') {new_y++;}
+    else if (move_direction == 'D') {new_x++;}
+    else if (move_direction == 'W') {new_y--;}
+    else if (move_direction == 'S') {new_y++;}
+    else {return 0;}
     
     if (new_y >= adventure->map.height || new_x >= adventure->map.width || new_x < 0 || new_y < 0) {return 2;}
 
@@ -444,62 +461,79 @@ void print_map(Adventure *adventure) {
     }
 }
 
-void map(void) {
-    
-    Adventure adventure = {0};
+void new_location(Adventure *adventure, char key) {
+
+    printf("Вы все дальше от дома....\n");
+
+    free_map(&adventure->map);
+
     int width = (rand() % 26) + 5;
     int height = width;
-    int hero_x;
-    int hero_y;
+
+    adventure->rooms++;
+    
+    if (create_map(&adventure->map, height, width) == 0) {printf("Ошибка выделения памяти\n");}
+    generate_map(&adventure->map);
+
+    if (key == 'W') {adventure->hero.x = width / 2; adventure->hero.y = height - 1;}
+    else if (key == 'A') {adventure->hero.x = width - 1; adventure->hero.y = height / 2;}
+    else if (key == 'S') {adventure->hero.x = width / 2; adventure->hero.y = 0;}
+    else if (key == 'D') {adventure->hero.x = 0; adventure->hero.y = height / 2;}
+
+    adventure->map.cells[adventure->hero.y][adventure->hero.x] = '.';
+
+    create_bonfire(adventure);
+}
+
+
+void adventure(void) {
+
+    Adventure adventure = {0};
+
+    int width = (rand() % 26) + 5;
+    int height = width;
     char key = ' ';
-    int vision = -1;
-    int rooms = 1;
-    int result = 1;
-    
-    create_map(&adventure.map, height, width);
+    int result = 0;
+
+    adventure.vision = 0;
+    adventure.rooms = 1;
+
+    if (create_map(&adventure.map, height, width) == 0) {printf("Ошибка выделения памяти");}
     generate_map(&adventure.map);
-    
     create_hero(&adventure);
     create_bonfire(&adventure);
-    
+
     while(1) {
-        
-        if (key == 'R') {vision = 3;}
-        
+
         print_map(&adventure);
-        
+
         scanf(" %c", &key);
-        
-        result = move_hero(&adventure, key);
-        
-        if (result == 2) {
-            
-            printf("Вы все дальше от дома....");
-            
-            free_map(&adventure.map);
-            
-            width = (rand() % 26) + 5;
-            height = width;
-            rooms++;
-            
-            create_map(&adventure.map, height, width);
-            generate_map(&adventure.map);
-            create_bonfire(&adventure);
-            
-            if (key == 'W') {hero_x = width / 2; hero_y = height - 1;}
-            else if (key == 'A') {hero_x = width - 1; hero_y = height / 2;}
-            else if (key == 'S') {hero_x = width / 2; hero_y = 0;}
-            else if (key == 'D') {hero_x = 0; hero_y = height / 2;}
-            
-        }
-        if (result == 3) {
-            //printf("Вы нашли костер... вас клонит в сон...\n");
-            if (key == 'Q' || key == 'q') {
+
+        if (key == 'R') {adventure.vision = 3; continue;}
+        if (key == 'Q') {
+
+            if (adventure.hero.x == adventure.bonfire.x &&
+                adventure.hero.y == adventure.bonfire.y) {
+
+                printf("Вас клонит в сон...\n");
                 break;
+
             }
+
+            printf("Слишком страшно спать...\n");
+            continue;
+
         }
-        printf("Расстояние до дома: бесконечность и %i\n", rooms);
-        if (vision != -1) {vision--;}
+
+        result = move_hero(&adventure, key);
+
+        if (result == 2) {new_location(&adventure, key);}
+        if (result == 3) {printf("Вы чувствуете тепло костра...\n");}
+
+        printf("Расстояние до дома: бесконечность и %i\n", adventure.rooms);
+
+        if (adventure.vision > 0) {adventure.vision--;}
+
     }
     free_map(&adventure.map);
 }
@@ -548,7 +582,7 @@ int main(void) {
             case 9:
                 check_village(); break;
             case 10:
-                map(); break;
+                adventure(); break;
             default:
                 printf("Нет такого пункта!!!\n"); break;
             case 403:
