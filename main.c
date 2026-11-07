@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>    // Библиотеки
 #include <time.h>
+#include <ctype.h>
 
 #define md 10    // max_id
 #define MAX_NAME_LEN 64
@@ -350,13 +351,19 @@ typedef struct {
 } Bonfire;
 
 typedef struct {
+    int x;
+    int y;
+} Light;
+
+typedef struct {
     Map map;
     Hero hero;
     Bonfire bonfire;
+    Light light;
     int vision;
     int rooms;
 } Adventure;
-//1
+
 void free_map(Map *map) {
     for (int i = 0; i < map->height; i++) {
         free(map->cells[i]);
@@ -452,13 +459,14 @@ int move_hero(Adventure *adventure, char move_direction) {
 }
 
 void print_map(Adventure *adventure) {
+    
     for (int i = 0; i < adventure->map.height; i++) {
         for (int j = 0; j < adventure->map.width; j++) {
+            
+            int dx = adventure->light.x - j;
+            int dy = adventure->light.y - i;
+            
             if (i == adventure->hero.y && j == adventure->hero.x) {printf(" *"); continue;}
-            
-            int dx = adventure->hero.x - j;
-            int dy = adventure->hero.y - i;
-            
             if (dx * dx + dy * dy <= adventure->vision * adventure->vision * LIGHT_LEVEL && adventure->vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
             
             printf(" ?");
@@ -511,11 +519,14 @@ void adventure(void) {
 
     while(1) {
 
+        printf("\033[2J\033[J");
+        
         print_map(&adventure);
 
         scanf(" %c", &key);
+        key = toupper(key);
 
-        if (key == 'R') {adventure.vision = 5; continue;}
+        if (key == 'R') {adventure.vision = 5; adventure.light.x = adventure.hero.x; adventure.light.y = adventure.hero.y; continue;}
         if (key == 'Q') {
 
             if (adventure.hero.x == adventure.bonfire.x &&
@@ -546,7 +557,7 @@ void adventure(void) {
 
 //МЭЙН
 int main(void) {
-    
+     
     load_items();
     enter_nickname();
     load_input();
