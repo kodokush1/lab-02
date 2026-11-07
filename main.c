@@ -13,6 +13,8 @@
 #define LIGHT_LEVEL 3
 #define TREE_CHANCE 15
 #define ROCK_CHANCE 30
+#define MIN_MAP 5
+#define MAX_MAP 26
 
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 char name_items[md][MAX_NAME_LEN];
@@ -353,6 +355,7 @@ typedef struct {
 typedef struct {
     int x;
     int y;
+    int vision;
 } Light;
 
 typedef struct {
@@ -360,7 +363,6 @@ typedef struct {
     Hero hero;
     Bonfire bonfire;
     Light light;
-    int vision;
     int rooms;
 } Adventure;
 
@@ -466,8 +468,9 @@ void print_map(Adventure *adventure) {
             int dx = adventure->light.x - j;
             int dy = adventure->light.y - i;
             
-            if (i == adventure->hero.y && j == adventure->hero.x) {printf(" *"); continue;}
-            if (dx * dx + dy * dy <= adventure->vision * adventure->vision * LIGHT_LEVEL && adventure->vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
+            if (i == adventure->hero.y && j == adventure->hero.x) {printf(" \x1B[32m*\x1B[0m"); continue;}
+            if (dx * dx + dy * dy <= adventure->light.vision * adventure->light.vision * LIGHT_LEVEL
+                && adventure->light.vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
             
             printf(" ?");
         }
@@ -479,10 +482,11 @@ void new_location(Adventure *adventure, char key) {
 
     printf("Вы все дальше от дома....\n");
 
+    adventure->light.vision = 0;
     free_map(&adventure->map);
 
-    int width = (rand() % 26) + 5;
-    int height = width;
+    int width = (rand() % MAX_MAP) + MIN_MAP;
+    int height = (rand() % MAX_MAP) + MIN_MAP;
 
     adventure->rooms++;
     
@@ -504,12 +508,12 @@ void adventure(void) {
 
     Adventure adventure = {0};
 
-    int width = (rand() % 26) + 5;
-    int height = width;
+    int width = (rand() % MAX_MAP) + MIN_MAP;
+    int height = (rand() % MAX_MAP) + MIN_MAP;
     char key = ' ';
     int result = 0;
 
-    adventure.vision = 0;
+    adventure.light.vision = 0;
     adventure.rooms = 1;
 
     if (create_map(&adventure.map, height, width) == 0) {printf("Ошибка выделения памяти");}
@@ -518,15 +522,17 @@ void adventure(void) {
     create_bonfire(&adventure);
 
     while(1) {
-
+        
         printf("\033[2J\033[J");
         
         print_map(&adventure);
-
+        printf("Расстояние до дома: бесконечность и %i\n", adventure.rooms);
+        if (result == BONFIRE) {printf("Вы чувствуете тепло костра...\n");}
+        
         scanf(" %c", &key);
         key = toupper(key);
 
-        if (key == 'R') {adventure.vision = 5; adventure.light.x = adventure.hero.x; adventure.light.y = adventure.hero.y; continue;}
+        if (key == 'R') {adventure.light.vision = 5; adventure.light.x = adventure.hero.x; adventure.light.y = adventure.hero.y; continue;}
         if (key == 'Q') {
 
             if (adventure.hero.x == adventure.bonfire.x &&
@@ -545,11 +551,8 @@ void adventure(void) {
         result = move_hero(&adventure, key);
 
         if (result == NEW_LOCATION) {new_location(&adventure, key);}
-        if (result == BONFIRE) {printf("Вы чувствуете тепло костра...\n");}
-
-        printf("Расстояние до дома: бесконечность и %i\n", adventure.rooms);
-
-        if (adventure.vision > 0) {adventure.vision--;}
+        
+        if (adventure.light.vision > 0) {adventure.light.vision--;}
 
     }
     free_map(&adventure.map);
