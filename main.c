@@ -7,6 +7,12 @@
 #define MAX_NAME_LEN 64
 #define shedule 13
 
+#define BONFIRE 3
+#define NEW_LOCATION 2
+#define LIGHT_LEVEL 3
+#define TREE_CHANCE 15
+#define ROCK_CHANCE 30
+
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 char name_items[md][MAX_NAME_LEN];
 
@@ -350,7 +356,7 @@ typedef struct {
     int vision;
     int rooms;
 } Adventure;
-
+//1
 void free_map(Map *map) {
     for (int i = 0; i < map->height; i++) {
         free(map->cells[i]);
@@ -393,8 +399,8 @@ void generate_map(Map *map) {
             
             int chance = rand() % 100;
             
-            if (chance <= 15) {map->cells[i][j] = 'T';}
-            else if (chance <= 30 && chance > 15) {map->cells[i][j] = 'R';}
+            if (chance <= TREE_CHANCE) {map->cells[i][j] = 'T';}
+            else if (chance <= ROCK_CHANCE && chance > TREE_CHANCE) {map->cells[i][j] = 'R';}
             else {map->cells[i][j] = '.';}
             
         }
@@ -433,14 +439,14 @@ int move_hero(Adventure *adventure, char move_direction) {
     else if (move_direction == 'S') {new_y++;}
     else {return 0;}
     
-    if (new_y >= adventure->map.height || new_x >= adventure->map.width || new_x < 0 || new_y < 0) {return 2;}
+    if (new_y >= adventure->map.height || new_x >= adventure->map.width || new_x < 0 || new_y < 0) {return NEW_LOCATION;}
 
     if (adventure->map.cells[new_y][new_x] != '.' && adventure->map.cells[new_y][new_x] != '^') {return 0;}
     
     adventure->hero.x = new_x;
     adventure->hero.y = new_y;
     
-    if (adventure->map.cells[new_y][new_x] == '^') {return 3;}
+    if (adventure->map.cells[new_y][new_x] == '^') {return BONFIRE;}
     
     return 0;
 }
@@ -453,7 +459,7 @@ void print_map(Adventure *adventure) {
             int dx = adventure->hero.x - j;
             int dy = adventure->hero.y - i;
             
-            if (dx * dx + dy * dy <= 49 && adventure->vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
+            if (dx * dx + dy * dy <= adventure->vision * adventure->vision * LIGHT_LEVEL && adventure->vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
             
             printf(" ?");
         }
@@ -509,7 +515,7 @@ void adventure(void) {
 
         scanf(" %c", &key);
 
-        if (key == 'R') {adventure.vision = 3; continue;}
+        if (key == 'R') {adventure.vision = 5; continue;}
         if (key == 'Q') {
 
             if (adventure.hero.x == adventure.bonfire.x &&
@@ -527,8 +533,8 @@ void adventure(void) {
 
         result = move_hero(&adventure, key);
 
-        if (result == 2) {new_location(&adventure, key);}
-        if (result == 3) {printf("Вы чувствуете тепло костра...\n");}
+        if (result == NEW_LOCATION) {new_location(&adventure, key);}
+        if (result == BONFIRE) {printf("Вы чувствуете тепло костра...\n");}
 
         printf("Расстояние до дома: бесконечность и %i\n", adventure.rooms);
 
@@ -557,7 +563,8 @@ int main(void) {
                ".Любимый ресурс\n7"
                ".Поиск предмета в рюкзаке\n8"
                ".Записать состояние в дневник\n9"
-               ".Расписание жителей деревни\n0"
+               ".Расписание жителей деревни\n10"
+               ".Отправиться в приключение\n0"
                ".Завершить программу\n", nickname);
         
         switch(check()) {
