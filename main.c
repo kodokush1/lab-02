@@ -4,17 +4,11 @@
 #include <time.h>
 #include <ctype.h>
 
+#include "map.h"
+
 #define md 10    // max_id
 #define MAX_NAME_LEN 64
 #define shedule 13
-
-#define BONFIRE 3
-#define NEW_LOCATION 2
-#define LIGHT_LEVEL 3
-#define TREE_CHANCE 15
-#define ROCK_CHANCE 30
-#define MIN_MAP 5
-#define MAX_MAP 26
 
 int inventory[md] = {0, 5, 2, 1, 0, 5, 0, 1, 8, 2};    // Инвентарь
 char name_items[md][MAX_NAME_LEN];
@@ -25,34 +19,46 @@ int current_day = 1;    // Кейсы 2 и 3(время)
 int current_hour = 8;
 int time_skip;
 
-//НАДО ПЕРЕЛЕЛАИТТ
+enum InputResult {
+    INPUT_INVALID = -1,
+    INPUT_END = -2
+};
 
-//НАДО ПКЕрЕДАЛТЬ
-int check(void) { // Функция скип тайм с защитой от дурака
-    
+int check(void) {
     int num;
-
-    if (scanf("%d", &num) != 1 || num <= 0) {
-        while (getchar() != '\n');
-        return -1;
+    int result = scanf("%d", &num);
+    if (result == EOF) {
+        return INPUT_END;
     }
 
-    while (getchar() != '\n');
+    int ch;
+    int trailing_text = 0;
+    while ((ch = getchar()) != '\n' && ch != EOF) {
+        if (!isspace(ch)) {
+            trailing_text = 1;
+        }
+    }
+
+    if (result != 1 || num < 0 || trailing_text) {
+        return INPUT_INVALID;
+    }
 
     return num;
-    
 }
 
 int check_slot(void) {
-    
     int num;
-    
-    do{
+    do {
         num = check();
-    } while(num < md || num >= 0);
-    
+        if (num == INPUT_END) {
+            return INPUT_END;
+        }
+        if (num < 0 || num >= md) {
+            printf("Введите число от 0 до %d: ", md - 1);
+        }
+    } while (num < 0 || num >= md);
+
     return num;
-    
 }
 
 //какая та шляпа чтобы считать количество символов и потом можно было пробелы ставить и там типа красиво
@@ -92,7 +98,10 @@ void print_skip_time(void) {
     
     printf("Сколько часов вы хотите пропустить?\n");
     time_skip = check();
-    if (time_skip == -1) { printf("Неверный ввод!!!\n"); return; }
+    if (time_skip < 1) {
+        printf("Введите количество часов от 1.\n");
+        return;
+    }
     current_hour = current_hour + time_skip;
     while (current_hour >= 24) { current_hour = current_hour - 24; current_day += 1; }
     
@@ -113,10 +122,10 @@ void up_item(void) {
     
     printf("Введите номер слота (0-9):\n");
     slot = check_slot();
-    if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    if (slot == INPUT_END) { return; }
     printf("Введите ID предмета (0-9):\n");
     item = check_slot();
-    if (item == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    if (item == INPUT_END) { return; }
     inventory[slot] = item;
     
 }
@@ -128,7 +137,7 @@ void null_slot(void) {
     
     printf("Введите номер слота [0-9]\n");
     slot = check_slot();
-    if (slot == 403) { printf("Ошибка 403: введите одну цифру!\n"); return; }
+    if (slot == INPUT_END) { return; }
     inventory[slot] = 0;
     
 }
@@ -335,229 +344,6 @@ void diary(void) {
     
 }
 
-//КАРТА
-typedef struct {
-    char **cells;
-    int height;
-    int width;
-} Map;
-
-typedef struct {
-    int x;
-    int y;
-} Hero;
-
-typedef struct {
-    int x;
-    int y;
-} Bonfire;
-
-typedef struct {
-    int x;
-    int y;
-    int vision;
-} Light;
-
-typedef struct {
-    Map map;
-    Hero hero;
-    Bonfire bonfire;
-    Light light;
-    int rooms;
-} Adventure;
-
-void free_map(Map *map) {
-    for (int i = 0; i < map->height; i++) {
-        free(map->cells[i]);
-    }
-    
-    free(map->cells);
-    
-    map->cells = NULL;
-    map->width = 0;
-    map->height = 0;
-}
-
-int create_map(Map *map, int height, int width) {
-    
-    map->height = height;
-    map->width = width;
-    
-    map->cells = (char**)malloc(height * sizeof(char*));
-    
-    if (map->cells == NULL) {
-        return 0;
-    }
-    
-    for (int i = 0; i < height; i++) {
-        map->cells[i] = (char*)malloc(width * sizeof(char));
-    
-        if (map->cells[i] == NULL) {
-            for (int j = 0; j < i; j++) {free(map->cells[j]);}
-            return 0;
-        }
-    }
-    
-    return 1;
-}
-
-void generate_map(Map *map) {
-    
-    for (int i = 0; i < map->height; i++) {
-        for (int j = 0; j < map->width; j++) {
-            
-            int chance = rand() % 100;
-            
-            if (chance <= TREE_CHANCE) {map->cells[i][j] = 'T';}
-            else if (chance <= ROCK_CHANCE && chance > TREE_CHANCE) {map->cells[i][j] = 'R';}
-            else {map->cells[i][j] = '.';}
-            
-        }
-    }
-}
-
-void create_hero(Adventure *adventure) {
-    do {
-        
-        adventure->hero.x = rand() % adventure->map.width;
-        adventure->hero.y = rand() % adventure->map.height;
-        
-    } while(adventure->map.cells[adventure->hero.y][adventure->hero.x] != '.');
-}
-
-void create_bonfire(Adventure *adventure) {
-    do {
-        
-        adventure->bonfire.x = rand() % adventure->map.width;
-        adventure->bonfire.y = rand() % adventure->map.height;
-        
-    } while(adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] != '.' ||
-            (adventure->hero.x == adventure->bonfire.x && adventure->hero.y == adventure->bonfire.y));
-    
-    adventure->map.cells[adventure->bonfire.y][adventure->bonfire.x] = '^';
-}
-
-int move_hero(Adventure *adventure, char move_direction) {
-    
-    int new_x = adventure->hero.x;
-    int new_y = adventure->hero.y;
-    
-    if (move_direction == 'A') {new_x--;}
-    else if (move_direction == 'D') {new_x++;}
-    else if (move_direction == 'W') {new_y--;}
-    else if (move_direction == 'S') {new_y++;}
-    else {return 0;}
-    
-    if (new_y >= adventure->map.height || new_x >= adventure->map.width || new_x < 0 || new_y < 0) {return NEW_LOCATION;}
-
-    if (adventure->map.cells[new_y][new_x] != '.' && adventure->map.cells[new_y][new_x] != '^') {return 0;}
-    
-    adventure->hero.x = new_x;
-    adventure->hero.y = new_y;
-    
-    if (adventure->map.cells[new_y][new_x] == '^') {return BONFIRE;}
-    
-    return 0;
-}
-
-void print_map(Adventure *adventure) {
-    
-    for (int i = 0; i < adventure->map.height; i++) {
-        for (int j = 0; j < adventure->map.width; j++) {
-            
-            int dx = adventure->light.x - j;
-            int dy = adventure->light.y - i;
-            
-            if (i == adventure->hero.y && j == adventure->hero.x) {printf(" \x1B[32m*\x1B[0m"); continue;}
-            if (dx * dx + dy * dy <= adventure->light.vision * adventure->light.vision * LIGHT_LEVEL
-                && adventure->light.vision > 0) {printf(" %c", adventure->map.cells[i][j]); continue;}
-            
-            printf(" ?");
-        }
-        printf("\n");
-    }
-}
-
-void new_location(Adventure *adventure, char key) {
-
-    printf("Вы все дальше от дома....\n");
-
-    adventure->light.vision = 0;
-    free_map(&adventure->map);
-
-    int width = (rand() % MAX_MAP) + MIN_MAP;
-    int height = (rand() % MAX_MAP) + MIN_MAP;
-
-    adventure->rooms++;
-    
-    if (create_map(&adventure->map, height, width) == 0) {printf("Ошибка выделения памяти\n");}
-    generate_map(&adventure->map);
-
-    if (key == 'W') {adventure->hero.x = width / 2; adventure->hero.y = height - 1;}
-    else if (key == 'A') {adventure->hero.x = width - 1; adventure->hero.y = height / 2;}
-    else if (key == 'S') {adventure->hero.x = width / 2; adventure->hero.y = 0;}
-    else if (key == 'D') {adventure->hero.x = 0; adventure->hero.y = height / 2;}
-
-    adventure->map.cells[adventure->hero.y][adventure->hero.x] = '.';
-
-    create_bonfire(adventure);
-}
-
-
-void adventure(void) {
-
-    Adventure adventure = {0};
-
-    int width = (rand() % MAX_MAP) + MIN_MAP;
-    int height = (rand() % MAX_MAP) + MIN_MAP;
-    char key = ' ';
-    int result = 0;
-
-    adventure.light.vision = 0;
-    adventure.rooms = 1;
-
-    if (create_map(&adventure.map, height, width) == 0) {printf("Ошибка выделения памяти");}
-    generate_map(&adventure.map);
-    create_hero(&adventure);
-    create_bonfire(&adventure);
-
-    while(1) {
-        
-        printf("\033[2J\033[J");
-        
-        print_map(&adventure);
-        printf("Расстояние до дома: бесконечность и %i\n", adventure.rooms);
-        if (result == BONFIRE) {printf("Вы чувствуете тепло костра...\n");}
-        
-        scanf(" %c", &key);
-        key = toupper(key);
-
-        if (key == 'R') {adventure.light.vision = 5; adventure.light.x = adventure.hero.x; adventure.light.y = adventure.hero.y; continue;}
-        if (key == 'Q') {
-
-            if (adventure.hero.x == adventure.bonfire.x &&
-                adventure.hero.y == adventure.bonfire.y) {
-
-                printf("Вас клонит в сон...\n");
-                break;
-
-            }
-
-            printf("Слишком страшно спать...\n");
-            continue;
-
-        }
-
-        result = move_hero(&adventure, key);
-
-        if (result == NEW_LOCATION) {new_location(&adventure, key);}
-        
-        if (adventure.light.vision > 0) {adventure.light.vision--;}
-
-    }
-    free_map(&adventure.map);
-}
-
 //МЭЙН
 int main(void) {
      
@@ -606,8 +392,9 @@ int main(void) {
                 adventure(); break;
             default:
                 printf("Нет такого пункта!!!\n"); break;
-            case 403:
+            case INPUT_INVALID:
                 printf("Введите один символ и именно число!!!\n"); break;
+            case INPUT_END:
             case 0 :
                 return 0;
                 
