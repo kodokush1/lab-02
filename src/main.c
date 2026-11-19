@@ -4,7 +4,7 @@
 #include <time.h>
 #include <ctype.h>
 
-#include "map.h"
+#include "adventure.h"
 #include "player.h"
 
 #define md 10    // max_id

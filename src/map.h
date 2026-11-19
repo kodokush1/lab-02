@@ -1,13 +1,8 @@
 #ifndef MAP_H
 #define MAP_H
 
-#define BONFIRE 3
-#define NEW_LOCATION 2
-#define LIGHT_LEVEL 3
 #define TREE_CHANCE 15
 #define ROCK_CHANCE 30
-#define MIN_MAP 5
-#define MAX_MAP 26
 
 typedef struct {
     char **cells;
@@ -15,30 +10,8 @@ typedef struct {
     int width;
 } Map;
 
-typedef struct {
-    int x;
-    int y;
-} Hero;
-
-typedef struct {
-    int x;
-    int y;
-} Bonfire;
-
-typedef struct {
-    int x;
-    int y;
-    int vision;
-} Light;
-
-typedef struct {
-    Map map;
-    Hero hero;
-    Bonfire bonfire;
-    Light light;
-    int floors;
-} Adventure;
-
-void adventure(void);
+void free_map(Map *map);
+int create_map(Map *map, int height, int width);
+void generate_map(Map *map);
 
 #endif
