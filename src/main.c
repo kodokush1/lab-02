@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #include "map.h"
+#include "player.h"
 
 #define md 10    // max_id
 #define MAX_NAME_LEN 64
@@ -73,16 +74,6 @@ int utf8_len(char const *str) {
         str++;
     }
     return len;
-    
-}
-
-//ВВОД НИКНЕЙМА
-void enter_nickname(void) {
-    do {
-
-        printf("Введите никнейм[до 32 символов]: ");
-        scanf("%255s", nickname);
-    } while (utf8_len(nickname) > 32);
     
 }
 
@@ -347,16 +338,16 @@ void diary(void) {
 //МЭЙН
 int main(void) {
      
+    Player *player = NULL;
     load_items();
-    enter_nickname();
     load_input();
     srand((unsigned int)time(0));
     
     while(1){
         
         printf("Привет, %s\n1"
-               ".Текущее время\n2"
-               ".Пропуск времени\n3"
+               ".Создать персонажа\n2"
+               ".Карточка персонажа\n3"
                ".Показать инвентарь\n4"
                ".Поднять предмет\n5"
                ".Обнуление слота\n6"
@@ -365,14 +356,35 @@ int main(void) {
                ".Записать состояние в дневник\n9"
                ".Расписание жителей деревни\n10"
                ".Отправиться в приключение\n0"
-               ".Завершить программу\n", nickname);
+               ".Завершить программу\n", player != NULL ? player->name : "???");
         
         switch(check()) {
                 
             case 1 :
-                print_current_hour(); break;
+                if (player == NULL) {
+                    player = create_player(player);
+                }
+                else {
+                    printf("Персонаж уже создан. Хотите пересоздать? [1.да] [2.НЕТ]\n");
+                    switch (check()) {
+                        case 1:
+                            player = create_player(player);
+                            break;
+                        case 2:
+                            break;
+                            
+                        default:
+                            break;
+                    }
+                }
+                break;
             case 2 :
-                print_skip_time(); break;
+                if (player == NULL) {
+                    printf("Персонаж не создан\n");
+                    break;
+                }
+                else { player_description(player); break;}
+                
             case 3 :
                 print_inventory(); break;
             case 4 :
@@ -396,6 +408,7 @@ int main(void) {
                 printf("Введите один символ и именно число!!!\n"); break;
             case INPUT_END:
             case 0 :
+                free(player);
                 return 0;
                 
         }
